@@ -15,8 +15,8 @@ class LinearCrossEntropyImpl(enum.IntEnum):
     CCE = auto()
     TORCH_COMPILE = auto()
 
-
-if platform.system() != "Darwin":
+PLATFORM_SYSTEM = platform.system()
+if PLATFORM_SYSTEM != "Darwin":
     from cut_cross_entropy.cce import cce_linear_cross_entropy
 
     LCE_IMPL_DEFAULT = LinearCrossEntropyImpl.CCE
@@ -34,7 +34,7 @@ def linear_cross_entropy(
     softcap: float | None = None,
     reduction: str = "mean",
     shift: bool = False,
-    filter_eps: float | str | None = "auto",
+    filter_eps: float | str | None = "high",
     impl: str | LinearCrossEntropyImpl = LCE_IMPL_DEFAULT,
 ) -> torch.Tensor:
     """
@@ -49,7 +49,7 @@ def linear_cross_entropy(
 
     match impl:
         case "cce":
-            if platform.system() == "Darwin":
+            if PLATFORM_SYSTEM == "Darwin":
                 raise RuntimeError(
                     "CCE does not support MacOS. Please use torch_compile when running on MacOS instead."
                 )
@@ -72,7 +72,7 @@ class LinearCrossEntropy(nn.Module):
         ignore_index: int = IGNORE_INDEX,
         softcap: float | None = None,
         reduction: str = "mean",
-        filter_eps: float | str | None = "auto",
+        filter_eps: float | str | None = "high",
         shift: bool = False,
         impl: str | LinearCrossEntropyImpl = LCE_IMPL_DEFAULT,
     ):

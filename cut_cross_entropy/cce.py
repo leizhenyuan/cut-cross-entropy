@@ -149,11 +149,11 @@ def cce_linear_cross_entropy(
     """
     assert e.size()[0:-1] == targets.size()
     assert e.size(-1) == c.size(1)
-    if not torch.cuda.is_bf16_supported():
-        raise RuntimeError(
-            "Cut Cross Entropy requires an ampere GPU or newer. "
-            "Consider using torch_compile_linear_cross_entropy for scenarios where one is not available."
-        )
+    # if not torch.cuda.is_bf16_supported():
+    #     raise RuntimeError(
+    #         "Cut Cross Entropy requires an ampere GPU or newer. "
+    #         "Consider using torch_compile_linear_cross_entropy for scenarios where one is not available."
+    #     )
 
     batch_shape = targets.size()
 
