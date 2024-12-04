@@ -16,11 +16,11 @@ def _handle_eps(filter_eps: float | str | None, dtype: torch.dtype) -> float | N
         case "auto":
             # bfloat16 eps = 0.0078125 / 8 = 0.0009765625
             #  float16 eps = 0.0009765625 / 10 = 9.765625e-05
-            return torch.finfo(dtype).eps / (8 if dtype == torch.bfloat16 else 10)
+            return torch.finfo(dtype).eps / 32
         case "high":
             # bfloat16 eps = 0.0078125 / 10 = 0.00078125
             #  float16 eps = 0.0009765625 / 12 = 8.138020833333333e-05
-            return torch.finfo(dtype).eps / (10 if dtype == torch.bfloat16 else 12)
+            return torch.finfo(dtype).eps / 28
         case _:
             raise RuntimeError(f"Unknown eps {filter_eps=}")
 
