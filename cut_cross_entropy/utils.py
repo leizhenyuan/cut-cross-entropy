@@ -14,15 +14,15 @@ def _handle_eps(filter_eps: float | str | None, dtype: torch.dtype) -> float | N
         case float():
             return filter_eps
         case "auto":
-            # bfloat16 eps = 0.0078125 / 8 = 0.0009765625
-            #  float16 eps = 0.0009765625 / 10 = 9.765625e-05
+            # bfloat16 eps = 0.0078125    / 32 = 0.000244140625
+            #  float16 eps = 0.0009765625 / 32 = 0.000030517578125
             return torch.finfo(dtype).eps / 32
         case "high":
-            # bfloat16 eps = 0.0078125 / 10 = 0.00078125
-            #  float16 eps = 0.0009765625 / 12 = 8.138020833333333e-05
-            return torch.finfo(dtype).eps / 28
+            # bfloat16 eps = 0.0078125    / 32 = 0.000244140625
+            #  float16 eps = 0.0009765625 / 32 = 0.000030517578125
+            return torch.finfo(dtype).eps / 32
         case _:
-            raise RuntimeError(f"Unknown eps {filter_eps=}")
+            raise RuntimeError(f"Unknown eps {filter_eps}")
 
 
 def _build_flat_valids(
