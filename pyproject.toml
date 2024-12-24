@@ -7,7 +7,7 @@ requires-python = ">= 3.10"
 
 dependencies = [
     "torch",
-    "triton",
+    "triton ; platform_system == 'Linux'",
 ]
 
 [project.optional-dependencies]
