@@ -74,6 +74,7 @@ class LinearCrossEntropyFunction(torch.autograd.Function):
         else:
             raise ValueError(f"Unknown reduction {reduction}")
 
+        print(e.dtype, c.dtype)
         ctx.save_for_backward(e, c, lse, params.targets, params.valids, logit_avg)
         ctx.params = params
 
