@@ -64,10 +64,10 @@ def _cce_lse_forward_kernel(
         # If it is out of bounds, set it to 0.
         if EVEN_D:
             e = tl.load(e_ptrs)
-            c = tl.load(c_ptrs).to(e.dtype.element_ty)
+            c = tl.load(c_ptrs).to(e.dtype)
         else:
             e = tl.load(e_ptrs, mask=offs_d[None, :] < D - d * BLOCK_D, other=0.0)
-            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0).to(e.dtype.element_ty)
+            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0).to(e.dtype)
         accum = tl.dot(e, c, accum, input_precision=DOT_PRECISION)
         e_ptrs += BLOCK_D * stride_ed
         c_ptrs += BLOCK_D * stride_cd
