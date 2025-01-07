@@ -254,6 +254,10 @@ def cce_backward_kernel(
     assert c.size(1) == e.size(1)
     assert lse.size(0) == e.size(0) or (valids is not None and lse.size(0) == valids.size(0))
     print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
     # assert e.dtype in (
     #     torch.float16,
     #     torch.bfloat16,
