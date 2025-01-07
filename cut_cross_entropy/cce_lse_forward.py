@@ -64,10 +64,10 @@ def _cce_lse_forward_kernel(
         # If it is out of bounds, set it to 0.
         if EVEN_D:
             e = tl.load(e_ptrs)
-            c = tl.load(c_ptrs)
+            c = tl.load(c_ptrs).to(e.dtype.element_ty)
         else:
             e = tl.load(e_ptrs, mask=offs_d[None, :] < D - d * BLOCK_D, other=0.0)
-            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0)
+            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0).to(e.dtype.element_ty)
         accum = tl.dot(e, c, accum, input_precision=DOT_PRECISION)
         e_ptrs += BLOCK_D * stride_ed
         c_ptrs += BLOCK_D * stride_cd
@@ -111,7 +111,7 @@ _cce_lse_forward_kernel = triton.heuristics(  # type: ignore
         "GROUP_B": lambda args: 8,
         "DOT_PRECISION": lambda args: "tf32"
         if torch.get_float32_matmul_precision() == "high"
-        else "ieee",
+        else "ieee", # [TODO] Use tf32x3
     }
 )(_cce_lse_forward_kernel)
 _cce_lse_forward_kernel = cce_forward_autotune()(_cce_lse_forward_kernel)  # type: ignore

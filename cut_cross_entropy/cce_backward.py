@@ -131,10 +131,10 @@ def _cce_backward_kernel(
     for d in range(0, tl.cdiv(D, BLOCK_D)):
         if EVEN_D:
             e = tl.load(e_ptrs)
-            c = tl.load(c_ptrs)
+            c = tl.load(c_ptrs).to(e.dtype.element_ty)
         else:
             e = tl.load(e_ptrs, mask=offs_d[None, :] < D - d * BLOCK_D, other=0.0)
-            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0)
+            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0).to(e.dtype.element_ty)
 
         accum = tl.dot(e, c, accum)
 
