@@ -39,7 +39,7 @@ def _mm_backward(
         else:
             mask = partial_mask_b & (d_inds < (D - d * BLOCK_D))
 
-        b = tl.load(b_ptrs, mask=mask, other=0.0)
+        b = tl.load(b_ptrs, mask=mask, other=0.0).to(do.dtype)
 
         da_i = tl.dot(do, b).to(da_ptrs.dtype.element_ty)
 
@@ -104,6 +104,7 @@ def _cce_backward_kernel(
     HAS_TARGETS: tl.constexpr,
     HAS_SOFTCAP: tl.constexpr,
     SHIFT: tl.constexpr,
+    REQUIRES_GRAD: tl.constexpr,
 ):
     pid = tl.program_id(axis=0)
     num_b_chunks = tl.cdiv(B, BLOCK_B)
@@ -131,12 +132,12 @@ def _cce_backward_kernel(
     for d in range(0, tl.cdiv(D, BLOCK_D)):
         if EVEN_D:
             e = tl.load(e_ptrs)
-            c = tl.load(c_ptrs)
+            c = tl.load(c_ptrs).to(e.dtype)
         else:
             e = tl.load(e_ptrs, mask=offs_d[None, :] < D - d * BLOCK_D, other=0.0)
-            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0)
+            c = tl.load(c_ptrs, mask=offs_d[:, None] < D - d * BLOCK_D, other=0.0).to(e.dtype)
 
-        accum = tl.dot(e, c, accum)
+        accum = tl.dot(e, c, accum, input_precision = "ieee")
 
         e_ptrs += BLOCK_D * stride_ed
         c_ptrs += BLOCK_D * stride_cd
@@ -203,20 +204,21 @@ def _cce_backward_kernel(
     lock_offset = (pid_v // tl.cdiv(V, BLOCK_V * n_dc_locks_0)) * n_dc_locks_1
     dCLocks += lock_offset
 
-    _mm_backward(
-        tl.trans(d_accum),
-        dC + (offs_v[:, None] * stride_cv),
-        v_mask,
-        dCLocks,
-        n_dc_locks_1,
-        E + (offs_b[:, None] * stride_eb),
-        b_mask,
-        stride_cd,
-        stride_ed,
-        D,
-        MM_BACK_BLOCK_D,
-        MM_BACK_EVEN_D,
-    )
+    if REQUIRES_GRAD:
+        _mm_backward(
+            tl.trans(d_accum),
+            dC + (offs_v[:, None] * stride_cv),
+            v_mask,
+            dCLocks,
+            n_dc_locks_1,
+            E + (offs_b[:, None] * stride_eb),
+            b_mask,
+            stride_cd,
+            stride_ed,
+            D,
+            MM_BACK_BLOCK_D,
+            MM_BACK_EVEN_D,
+        )
 
 
 _cce_backward_kernel = triton.jit(_cce_backward_kernel)
@@ -232,6 +234,7 @@ _cce_backward_kernel = triton.heuristics(  # type: ignore
         "HAS_SOFTCAP": lambda args: args["softcap"] is not None,
         "ITEM_DO": lambda args: args["dOut"].numel() == 1,
         "GROUP_B": lambda args: 8,
+        "REQUIRES_GRAD" : lambda args: args["REQUIRES_GRAD"],
     }
 )(_cce_backward_kernel)
 _cce_backward_kernel = cce_backward_autotune()(_cce_backward_kernel)  # type: ignore
@@ -260,16 +263,22 @@ def cce_backward_kernel(
     assert c.dtype in (
         torch.float16,
         torch.bfloat16,
-    ), "Backwards requires classifier to be bf16 or fp16"
+        torch.float32,
+    ), "Backwards requires classifier to be bf16 or fp16 or fp32"
 
     do = do.contiguous()
     lse = lse.contiguous()
 
     de = torch.zeros_like(e)
-    dc = torch.zeros_like(c)
-
     assert de.stride() == e.stride()
-    assert dc.stride() == c.stride()
+
+    if c.requires_grad:
+        dc = torch.zeros_like(c, dtype = e.dtype)
+        assert dc.stride() == c.stride()
+        REQUIRES_GRAD = True
+    else:
+        dc = c
+        REQUIRES_GRAD = False
 
     if valids is not None:
         assert valids.ndim == 1
@@ -323,6 +332,7 @@ def cce_backward_kernel(
         filter_eps,
         B_BIN=b_bin_fn(B),
         SHIFT=shift,
+        REQUIRES_GRAD = REQUIRES_GRAD,
     )
 
-    return de, dc
+    return de, dc.to(c.dtype) if REQUIRES_GRAD else None
