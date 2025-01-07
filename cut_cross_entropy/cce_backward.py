@@ -253,14 +253,20 @@ def cce_backward_kernel(
     assert do.numel() in (e.size(0), 1)
     assert c.size(1) == e.size(1)
     assert lse.size(0) == e.size(0) or (valids is not None and lse.size(0) == valids.size(0))
-    assert e.dtype in (
-        torch.float16,
-        torch.bfloat16,
-    ), "Backwards requires embeddings to be bf16 or fp16"
-    assert c.dtype in (
-        torch.float16,
-        torch.bfloat16,
-    ), "Backwards requires classifier to be bf16 or fp16"
+    print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
+    print(e.dtype, c.dtype)
+    raise
+    # assert e.dtype in (
+    #     torch.float16,
+    #     torch.bfloat16,
+    # ), "Backwards requires embeddings to be bf16 or fp16"
+    # assert c.dtype in (
+    #     torch.float16,
+    #     torch.bfloat16,
+    # ), "Backwards requires classifier to be bf16 or fp16"
 
     do = do.contiguous()
     lse = lse.contiguous()
