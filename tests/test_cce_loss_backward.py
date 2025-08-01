@@ -6,7 +6,7 @@ from cut_cross_entropy import linear_cross_entropy
 from cut_cross_entropy.constants import IGNORE_INDEX
 from cut_cross_entropy.utils import softcapping
 
-skip_no_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="Test requires CUDA")
+skip_no_xpu = pytest.mark.skipif(not torch.xpu.is_available(), reason="Test requires XPU")
 
 
 def _grads(
@@ -53,7 +53,7 @@ def _grads(
     return orig_e.grad.detach().clone(), orig_c.grad.detach().clone()
 
 
-@skip_no_cuda
+@skip_no_xpu
 @pytest.mark.parametrize("impl", ["cce", "torch_compile"])
 @pytest.mark.parametrize("dtype,error_tol", [(torch.float16, 1e-3), (torch.bfloat16, 1e-2)])
 @pytest.mark.parametrize("softcap", [None, 20.0])
@@ -73,21 +73,21 @@ def test_loss_backward(
 ):
     torch.set_float32_matmul_precision("highest")
     torch._dynamo.config.cache_size_limit = 256
-    torch.cuda.manual_seed(0)
+    torch.xpu.manual_seed(0)
 
-    if dtype == torch.bfloat16 and not torch.cuda.is_available():
+    if dtype == torch.bfloat16 and not torch.xpu.is_available():
         pytest.skip(reason="BF16 not avaliable")
 
     N, V, D = shape
-    e = torch.randn((N, D), device="cuda", dtype=dtype, requires_grad=False) / (D**0.5)
-    c = torch.randn((V, D), device="cuda", dtype=dtype, requires_grad=False)
+    e = torch.randn((N, D), device="xpu", dtype=dtype, requires_grad=False) / (D**0.5)
+    c = torch.randn((V, D), device="xpu", dtype=dtype, requires_grad=False)
 
     c[0 : min(N, V) // 2] = e[0 : min(N, V) // 2]
 
-    targets = torch.randint(0, V, size=(N,), device="cuda")
+    targets = torch.randint(0, V, size=(N,), device="xpu")
 
     if invalids:
-        inds = torch.randperm(len(targets), device="cuda")[0 : int(0.2 * len(targets))]
+        inds = torch.randperm(len(targets), device="xpu")[0 : int(0.2 * len(targets))]
         targets[inds] = IGNORE_INDEX
 
     e = e.view(4, -1, D)
